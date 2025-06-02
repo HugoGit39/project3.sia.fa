@@ -1,6 +1,6 @@
 # list of required packages
 required_packages <- c(
-  "tidyverse", "readr", "ggplot2", "readxl", "lubridate", "lavaan"
+  "tidyverse", "readr", "ggplot2", "readxl", "lubridate", "lavaan", "tcltk", "ggcorrplot", "corrr"
 )
 
 # Load each package
