@@ -1,25 +1,27 @@
 # Between-person model (average per item per subject)
 
-# Get average per subject per item
+# Get average per subject per item (after renaming)
 between_df <- final_df %>%
   group_by(Name) %>%
-  summarise(across(starts_with("X."), ~ mean(.x, na.rm = TRUE)))
+  summarise(across(all_of(unname(col_rename_map)), ~ mean(.x, na.rm = TRUE)))
 
-# Rename items for lavaan clarity
-colnames(between_df) <- gsub("X\\.\\d+_VAS\\.\\.", "", colnames(between_df))
-colnames(between_df) <- gsub("\\.$", "", colnames(between_df))
 
 # 2-factor CFA model (between)
 cfa_model_between <- '
-  PositiveAffect =~ Hoe.gelukkig.voel.je.je.op.dit.moment +
-                     Hoe.ontspannen.voel.je.je.op.dit.moment +
-                     Hoe.energiek.voel.je.je.op.dit.moment +
-                     Hoe.tevreden.voel.je.je.op.dit.moment
+  PositiveAffect =~ Happy +
+                    Relaxed +
+                    Energetic +
+                    Content
 
-  NegativeAffect =~ Hoe.gestrest.voel.je.je.op.dit.moment +
-                     Hoe.angstig.voel.je.je.op.dit.moment +
-                     Hoe.geirriteerd.voel.je.je.op.dit.moment +
-                     Hoe.neerslachtig.voel.je.je.op.dit.moment
+  NegativeAffect =~ Stressed +
+                    Anxious +
+                    Irritated +
+                    Down
+
+  # Residual correlations
+  Relaxed ~~ Stressed
+  Relaxed ~~ Down
+  Stressed ~~ Down
 '
 
 # Fit the model
@@ -34,4 +36,3 @@ mod <- modindices(fit_between, sort = TRUE, minimum.value = 10)
 # Reuslt: add residual covariance between antonyms
 # Hoe.ontspannen.voel.je.je.op.dit.moment ~~ Hoe.gestrest.voel.je.je.op.dit.moment
 
-install.packages(c("ggcorrplot", "corrplot", "corrr"))

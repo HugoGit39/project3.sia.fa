@@ -1,43 +1,65 @@
-# Within-person model (multilevel CFA: subject = cluster, nested by day)
 
-# Create long version with item names
-within_df <- final_df %>%
-  select(Name, day = Scheduled.Time, starts_with("X.")) %>%
-  mutate(day = as.Date(day)) %>%
-  group_by(Name, day) %>%
-  summarise(across(starts_with("X."), ~ mean(.x, na.rm = TRUE)), .groups = "drop")
+# 1. Compute weekly mean per subject per item
+weekly_means <- long_df %>%
+  group_by(Name, Item) %>%
+  summarise(WeeklyMean = mean(Value, na.rm = TRUE), .groups = "drop")
 
-# Clean names
-colnames(within_df) <- gsub("X\\.\\d+_VAS\\.\\.", "", colnames(within_df))
-colnames(within_df) <- gsub("\\.$", "", colnames(within_df))
+# 2. Compute daily mean per subject per item
+daily_means <- long_df %>%
+  group_by(Name, day, Item) %>%
+  summarise(DailyMean = mean(Value, na.rm = TRUE), .groups = "drop")
 
-# 2-factor CFA model for within-level (multilevel structure)
+# 3. Join and subtract to get centered values
+within_centered <- daily_means %>%
+  left_join(weekly_means, by = c("Name", "Item")) %>%
+  mutate(Centered = DailyMean - WeeklyMean)
+
+# 4. Pivot to wide format (1 row per subject-day, 1 column per item)
+within_df <- within_centered %>%
+  select(Name, day, Item, Centered) %>%
+  pivot_wider(names_from = Item, values_from = Centered)
+
+# 5. Define 2-factor CFA model
 cfa_model_within <- '
-  level: 1
-    PositiveAffect =~ Hoe.gelukkig.voel.je.je.op.dit.moment +
-                       Hoe.ontspannen.voel.je.je.op.dit.moment +
-                       Hoe.energiek.voel.je.je.op.dit.moment +
-                       Hoe.tevreden.voel.je.je.op.dit.moment
-
-    NegativeAffect =~ Hoe.gestrest.voel.je.je.op.dit.moment +
-                       Hoe.angstig.voel.je.je.op.dit.moment +
-                       Hoe.geirriteerd.voel.je.je.op.dit.moment +
-                       Hoe.neerslachtig.voel.je.je.op.dit.moment
-
-  level: 2
-    PositiveAffect =~ Hoe.gelukkig.voel.je.je.op.dit.moment +
-                       Hoe.ontspannen.voel.je.je.op.dit.moment +
-                       Hoe.energiek.voel.je.je.op.dit.moment +
-                       Hoe.tevreden.voel.je.je.op.dit.moment
-
-    NegativeAffect =~ Hoe.gestrest.voel.je.je.op.dit.moment +
-                       Hoe.angstig.voel.je.je.op.dit.moment +
-                       Hoe.geirriteerd.voel.je.je.op.dit.moment +
-                       Hoe.neerslachtig.voel.je.je.op.dit.moment
+  PositiveAffect =~ Happy + Relaxed + Energetic + Content
+  NegativeAffect =~ Stressed + Anxious + Irritated + Down
 '
 
-# Fit the multilevel CFA
-fit_within <- sem(cfa_model_within, data = within_df, cluster = "Name", missing = "fiml", fixed.x = FALSE)
+# 6. Fit CFA model with clustering on Name
+fit_within <- cfa(
+  model = cfa_model_within,
+  data = within_df,
+  cluster = "Name",
+  missing = "fiml"
+)
 
-# Summary
+# 7. Summary
 summary(fit_within, fit.measures = TRUE, standardized = TRUE)
+
+mod_within <- modindices(fit_within, sort = TRUE, minimum.value = 10)
+head(mod_within, 20)  # See top 20 suggested changes
+
+cfa_model_within_adj <- '
+  level: 1
+    PositiveAffect =~ Happy + Relaxed + Energetic + Content
+    NegativeAffect =~ Stressed + Anxious + Irritated + Down
+
+    # Add residual correlations suggested by modindices
+    Relaxed ~~ Stressed
+    Relaxed ~~ Down
+    Stressed ~~ Down
+
+  level: 2
+    PositiveAffect =~ Happy + Relaxed + Energetic + Content
+    NegativeAffect =~ Stressed + Anxious + Irritated + Down
+'
+
+fit_within_adj <- sem(
+  cfa_model_within_adj,
+  data = within_df,
+  cluster = "Name",
+  missing = "fiml"
+)
+
+summary(fit_within_adj, fit.measures = TRUE, standardized = TRUE)
+
