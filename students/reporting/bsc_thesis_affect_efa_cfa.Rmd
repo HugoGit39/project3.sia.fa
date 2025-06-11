@@ -1,0 +1,149 @@
+---
+title: "bsc_thesis_affect_efa_cfa"
+author: "H. Klarenberg, PhD"
+date: "2025-06-11"
+output: html_document
+---
+
+# 01_packages
+
+```{r load-packages, echo=FALSE, message=FALSE, warning=FALSE}
+# List of required packages
+required_packages <- c(
+  "tidyverse", "readr", "ggplot2", "readxl", "lubridate", "knitr", "kableExtra",
+  "lavaan", "tcltk", "ggcorrplot", "corrr", "psych"
+)
+
+# Load each package
+invisible(lapply(required_packages, function(pkg) {
+  library(pkg, character.only = TRUE)
+}))
+```
+
+# 02_open_df
+
+```{r load-data, echo=FALSE, message=FALSE, warning=FALSE}
+# Open file dialog to select CSV
+file_path <- tclvalue(tkgetOpenFile(filetypes = "{{CSV Files} {.csv}} {{All files} *}"))
+
+# Check if a file was selected
+if (file_path != "") {
+  final_df <- read.csv(file_path)
+  
+} else {
+  cat("No file selected.\n")
+}
+
+col_rename_map <- c(
+  "X.1_VAS..Hoe.gelukkig.voel.je.je.op.dit.moment."     = "Happy",
+  "X.2_VAS..Hoe.ontspannen.voel.je.je.op.dit.moment."   = "Relaxed",
+  "X.3_VAS..Hoe.energiek.voel.je.je.op.dit.moment."     = "Energetic",
+  "X.4_VAS..Hoe.tevreden.voel.je.je.op.dit.moment."     = "Content",
+  "X.5_VAS..Hoe.gestrest.voel.je.je.op.dit.moment."     = "Stressed",
+  "X.6_VAS..Hoe.angstig.voel.je.je.op.dit.moment."      = "Anxious",
+  "X.7_VAS..Hoe.geïrriteerd.voel.je.je.op.dit.moment."  = "Irritated",
+  "X.8_VAS..Hoe.neerslachtig.voel.je.je.op.dit.moment." = "Down"
+)
+
+names(final_df)[names(final_df) %in% names(col_rename_map)] <- col_rename_map[names(final_df)[names(final_df) %in% names(col_rename_map)]]
+
+
+# Convert to long format
+long_df <- final_df %>%
+  select(Name, day = Scheduled.Time, all_of(unname(col_rename_map))) %>%
+  mutate(day = as.Date(day)) %>%
+  pivot_longer(cols = all_of(unname(col_rename_map)),
+               names_to = "Item",
+               values_to = "Value")
+
+
+```
+
+# 03.1_descriptive_stats_between
+
+```{r descriptive-between, echo=FALSE, message=FALSE, warning=FALSE}
+# Compute descriptive stats per subject, per item
+between_descriptives <- long_df %>%
+  group_by(Name, Item) %>%
+  summarise(
+    Mean = mean(Value, na.rm = TRUE),
+    SD = sd(Value, na.rm = TRUE),
+    Variance = var(Value, na.rm = TRUE),
+    N = sum(!is.na(Value)),
+    .groups = "drop"
+  )
+
+# Show formatted table
+between_descriptives %>%
+  arrange(Item, Name) %>%
+  slice_head(n = 25) %>%
+  kable(digits = 2, format = "html", caption = "Descriptive Statistics (First 25 Rows)") %>%
+  kable_styling(full_width = FALSE, position = "center", bootstrap_options = c("striped", "hover"))
+
+# Create between_df for CFA and EFA
+between_df <- final_df %>%
+  group_by(Name) %>%
+  summarise(across(c(Happy, Relaxed, Energetic, Content,
+                     Stressed, Anxious, Irritated, Down), 
+                   ~ mean(.x, na.rm = TRUE))) %>%
+  ungroup()
+```
+
+# 03.1_descriptive_stats_within
+
+```{r descriptive-within, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Compute descriptive stats per subject, per item, per day
+subject_day_item_descriptives <- long_df %>%
+  group_by(Name, day, Item) %>%
+  summarise(
+    Mean = mean(Value, na.rm = TRUE),
+    SD = sd(Value, na.rm = TRUE),
+    Variance = var(Value, na.rm = TRUE),
+    N = sum(!is.na(Value)),
+    .groups = "drop"
+  )
+
+# Show only first 25 rows in a nicely formatted table
+subject_day_item_descriptives %>%
+  arrange(Name, day, Item) %>%
+  slice_head(n = 25) %>%
+  kable(digits = 2, format = "html", caption = "Descriptive Statistics by Participant, Day, and Item (First 25 Rows)") %>%
+  kable_styling(full_width = FALSE, position = "center", bootstrap_options = c("striped", "hover"))
+
+#create within dfs for cfa and efa
+within_df <- long_df %>%
+  group_by(Name, day, Item) %>%
+  summarise(Value = mean(Value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = Item, values_from = Value)
+
+# Show only the first 25 rows as a formatted table
+within_df %>%
+  arrange(Name, day) %>%
+  slice_head(n = 25) %>%
+  kable(digits = 2, format = "html", caption = "Within-Subject Mean Values (First 25 Rows)") %>%
+  kable_styling(full_width = FALSE, position = "center", bootstrap_options = c("striped", "hover"))
+
+# 1. Compute weekly mean per subject per item
+weekly_means <- long_df %>%
+  group_by(Name, Item) %>%
+  summarise(WeeklyMean = mean(Value, na.rm = TRUE), .groups = "drop")
+
+# 2. Compute daily mean per subject per item
+daily_means <- long_df %>%
+  group_by(Name, day, Item) %>%
+  summarise(DailyMean = mean(Value, na.rm = TRUE), .groups = "drop")
+
+# 3. Join and subtract to get centered values
+within_centered <- daily_means %>%
+  left_join(weekly_means, by = c("Name", "Item")) %>%
+  mutate(Centered = DailyMean - WeeklyMean)
+
+# Show first 25 rows as formatted table
+within_centered %>%
+  arrange(Name, day) %>%
+  slice_head(n = 25) %>%
+  kable(digits = 2, format = "html", caption = "Centered Within-Subject Daily Values (First 25 Rows)") %>%
+  kable_styling(full_width = FALSE, position = "center", bootstrap_options = c("striped", "hover"))
+
+```

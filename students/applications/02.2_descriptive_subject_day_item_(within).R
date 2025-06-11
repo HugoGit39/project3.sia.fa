@@ -30,7 +30,7 @@ within_centered <- daily_means %>%
   left_join(weekly_means, by = c("Name", "Item")) %>%
   mutate(Centered = DailyMean - WeeklyMean)
 
-# 4. Pivot to wide format (1 row per subject-day, 1 column per item)
+# 4. create within dfs for efa and cfae daily average - weekly averages
 within_centered_df <- within_centered %>%
   select(Name, day, Item, Centered) %>%
   pivot_wider(names_from = Item, values_from = Centered)
