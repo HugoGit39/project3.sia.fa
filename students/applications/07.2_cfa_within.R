@@ -1,23 +1,4 @@
 
-# 1. Compute weekly mean per subject per item
-weekly_means <- long_df %>%
-  group_by(Name, Item) %>%
-  summarise(WeeklyMean = mean(Value, na.rm = TRUE), .groups = "drop")
-
-# 2. Compute daily mean per subject per item
-daily_means <- long_df %>%
-  group_by(Name, day, Item) %>%
-  summarise(DailyMean = mean(Value, na.rm = TRUE), .groups = "drop")
-
-# 3. Join and subtract to get centered values
-within_centered <- daily_means %>%
-  left_join(weekly_means, by = c("Name", "Item")) %>%
-  mutate(Centered = DailyMean - WeeklyMean)
-
-# 4. Pivot to wide format (1 row per subject-day, 1 column per item)
-within_df <- within_centered %>%
-  select(Name, day, Item, Centered) %>%
-  pivot_wider(names_from = Item, values_from = Centered)
 
 # 5. Define 2-factor CFA model
 cfa_model_within <- '

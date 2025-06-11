@@ -1,10 +1,5 @@
 # Between-person model (average per item per subject)
 
-# Get average per subject per item (after renaming)
-between_df <- final_df %>%
-  group_by(Name) %>%
-  summarise(across(all_of(unname(col_rename_map)), ~ mean(.x, na.rm = TRUE)))
-
 
 # 2-factor CFA model (between)
 cfa_model_between <- '

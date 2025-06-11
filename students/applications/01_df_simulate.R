@@ -86,12 +86,19 @@ for (col in c("Scheduled.Time", "Issued.Time", "Response.Time")) {
   attr(final_df[[col]], "tzone") <- "Europe/Amsterdam"
 }
 
+# Optional: Rename columns for readability
+names(final_df)[(ncol(final_df)-7):ncol(final_df)] <- c(
+  "Happy", "Relaxed", "Energetic", "Content",
+  "Stressed", "Anxious", "Irritated", "Down"
+)
 
-# create long format for analysis
+#create long format
 long_df <- final_df %>%
-  select(Name, day = Scheduled.Time, starts_with("X.")) %>%
+  select(Name, day = Scheduled.Time, Happy, Relaxed, Energetic, Content,
+         Stressed, Anxious, Irritated, Down) %>%
   mutate(day = as.Date(day)) %>%
-  pivot_longer(cols = starts_with("X."),
+  pivot_longer(cols = c(Happy, Relaxed, Energetic, Content,
+                        Stressed, Anxious, Irritated, Down),
                names_to = "Item",
                values_to = "Value")
 
