@@ -1,79 +1,70 @@
-Multilevel Exploratory Factor Analysis (EFA) – NTR Experience Sampling Data
-This repository provides a reproducible workflow in R to perform both between-person and within-person (person-by-day) Exploratory Factor Analysis (EFA) using data from the Netherlands Twin Register (NTR) Experience Sampling Method (ESM) project.
+# 📊 Multilevel Exploratory Factor Analysis (EFA) on ESM Data from the Netherlands Twin Register (NTR)
 
-🔍 Goal
-The primary goal of this project is to investigate the latent structure of affective experience using EFA at multiple levels of analysis:
+This repository contains an R-based workflow to perform **Multilevel Exploratory Factor Analysis (EFA)** on Experience Sampling Method (ESM) data collected by the [Netherlands Twin Register (NTR)](https://tweelingenregister.vu.nl/).
 
-Between-person analysis
-Identifies stable individual differences by aggregating repeated affect measurements across time. Each participant is represented by their average responses, capturing how they differ from others.
+The goal is to uncover latent affective structures both **between individuals** and **within individuals across days**, using multilevel psychometric techniques.
 
-Within-person analysis (person-by-day)
-Explores daily fluctuations in affect within individuals. This helps determine whether the same factor structure that exists between individuals also holds across days within the same person.
+---
 
-Together, these analyses assess the stability and generalizability of emotion structures across time and individuals, using multilevel EFA methods.
+## 🧠 Project Goals
 
-📊 Methods Overview
-Data Preparation
+- **Between-Person Analysis**  
+  Identify stable individual differences by averaging item responses per person. This analysis reveals how people differ from each other in general affective tendencies.
 
-Load and clean raw ESM data
+- **Within-Person Analysis (Person-by-Day)**  
+  Assess how affect fluctuates **within** each individual across different days. This allows exploration of whether the factor structure found between individuals also holds within individuals.
 
-Rename items and reshape to long format for multilevel aggregation
+- **Multilevel EFA**  
+  Perform EFA at both levels and compare structures to examine cross-level stability in affective dimensions.
 
-Suitability for EFA
+---
 
-Compute Kaiser-Meyer-Olkin (KMO) measure of sampling adequacy
+## 🛠️ Method Overview
 
-Perform Bartlett’s test of sphericity
+### 1. Data Preparation
+- Import raw ESM CSV data
+- Rename item variables for readability
+- Convert to long format for flexibility in aggregation
 
-Factor Extraction
+### 2. EFA Suitability Checks
+- **Kaiser-Meyer-Olkin (KMO)** measure of sampling adequacy
+- **Bartlett's test of sphericity** to verify sufficient item intercorrelations
 
-Extract factors from person-averaged (between) and person-day (within) data
+### 3. Factor Extraction
+- Estimate eigenvalues and scree plots
+- Conduct parallel analysis (optional)
+- Extract factors using `psych::fa()` (e.g., maximum likelihood)
 
-Determine the number of factors using eigenvalues, scree plots, and parallel analysis
+### 4. Factor Rotation
+- **Varimax** (orthogonal, uncorrelated factors)
+- **Oblimin** (oblique, correlated factors)
 
-Rotation
+### 5. Interpretation
+- Review factor loadings
+- Identify simple structure
+- Eliminate weak or cross-loading items (if necessary)
 
-Use orthogonal (Varimax) or oblique (Oblimin) rotation to improve interpretability of factor loadings
+### 6. (Optional) Confirmatory Factor Analysis
+- Translate EFA structure into a CFA model using `lavaan`
+- Evaluate model fit (RMSEA, CFI, TLI, etc.)
 
-Interpretation
+---
 
-Analyze pattern matrices and communalities
+## 📁 Data Source
 
-Compare structures across levels
+This workflow was inspired by data collected in the [Netherlands Twin Register (NTR)](https://tweelingenregister.vu.nl/), which maintains a large-scale database of twins and their relatives.
 
-Model Comparison (optional)
+**Note**: This repository uses simulated or anonymized data. Access to real NTR data requires permission.
 
-Fit confirmatory factor analysis (CFA) models based on the EFA results
+---
 
-Assess model fit using standardized estimates, RMSEA, TLI, etc.
+## 📦 R Package Dependencies
 
-📁 Source Data
-The synthetic data structure in the project is inspired by the Netherlands Twin Register (NTR) ESM project:
+Make sure the following R packages are installed:
 
-https://tweelingenregister.vu.nl/
-
-Real-world data must be requested from NTR for actual analyses.
-
-📦 Dependencies
-The following R packages are used:
-
-tidyverse
-
-lubridate
-
-psych
-
-lavaan
-
-corrr
-
-ggcorrplot
-
-readxl
-
-tcltk
-
-Ensure all packages are installed before running the R Markdown file.
-
-✍️ Author
-This project was developed as part of a research effort to better understand the structure of affect across and within individuals using ecological momentary data from the NTR.
+```r
+install.packages(c(
+  "tidyverse", "readr", "ggplot2", "readxl",
+  "lubridate", "lavaan", "tcltk", "ggcorrplot",
+  "corrr", "psych"
+))
