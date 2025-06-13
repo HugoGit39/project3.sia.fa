@@ -9,10 +9,14 @@ between_descriptives <- long_df %>%
     .groups = "drop"
   )
 
-#create between dfs for cfa and efa
+# Create between-person dataframe including Age and Sex
 between_df <- final_df %>%
   group_by(Name) %>%
-  summarise(across(c(Happy, Relaxed, Energetic, Content,
-                     Stressed, Anxious, Irritated, Down), 
-                   ~ mean(.x, na.rm = TRUE))) %>%
+  summarise(
+    Age = first(Age),
+    Sex = first(Sex),
+    across(c(Happy, Relaxed, Energetic, Content,
+             Stressed, Anxious, Irritated, Down), 
+           ~ mean(.x, na.rm = TRUE))
+  ) %>%
   ungroup()
